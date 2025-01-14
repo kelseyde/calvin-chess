@@ -1,0 +1,29 @@
+# Compiled class file
+*.class
+
+# Log file
+*.log
+
+log/**
+
+# Package Files #
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+calvin-chess-engine
+calvin-chess-engine.jar
+
+target/**
+.idea/
+.log
+*.iml
+*.ipr
+*.iws
+*.log.json
+
+venv
+
+.DS_Store
