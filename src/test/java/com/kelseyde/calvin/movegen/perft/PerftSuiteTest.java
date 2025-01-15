@@ -1,55 +1,53 @@
 package com.kelseyde.calvin.movegen.perft;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
+
+import com.kelseyde.calvin.board.ChessVariant;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-public class PerftSuiteTest {
+class PerftSuiteTest {
 
     @Test
-    @Disabled
-    public void testPerftSuite() throws IOException {
-
+    @DisabledIfSystemProperty(named="perftDepth", matches = "0")
+    void testPerftSuite() throws IOException {
+		final int depth = Integer.getInteger("perftDepth", 2);
         List<String> lines = Files.readAllLines(Paths.get("src/test/resources/perft_suite.epd"));
-        lines.forEach(line -> {
-
+		System.out.println("perft depth: "+depth+", "+lines.size()+" lines");
+        lines.stream().parallel().forEach(line -> {
             String[] parts = line.split(";");
             String fen = parts[0];
-            if (parts.length > 1) {
-                long expectedTotalMoves = Long.parseLong(parts[1].split(" ")[1].trim());
-                perftDepth(fen, 1, expectedTotalMoves);
+            if (parts.length<=depth) {
+            	return;
             }
-            if (parts.length > 2) {
-                long expectedTotalMoves = Long.parseLong(parts[2].split(" ")[1].trim());
-                perftDepth(fen, 2, expectedTotalMoves);
-            }
-            if (parts.length > 3) {
-                long expectedTotalMoves = Long.parseLong(parts[3].split(" ")[1].trim());
-                perftDepth(fen, 3, expectedTotalMoves);
-            }
-            if (parts.length > 4) {
-                long expectedTotalMoves = Long.parseLong(parts[4].split(" ")[1].trim());
-                perftDepth(fen, 4, expectedTotalMoves);
-            }
-            if (parts.length > 5) {
-                long expectedTotalMoves = Long.parseLong(parts[5].split(" ")[1].trim());
-                perftDepth(fen, 5, expectedTotalMoves);
-            }
-            if (parts.length > 6) {
-                long expectedTotalMoves = Long.parseLong(parts[6].split(" ")[1].trim());
-                perftDepth(fen, 6, expectedTotalMoves);
-            }
-
+            long expectedTotalMoves = Long.parseLong(parts[depth].split(" ")[1].trim());
+            perftDepth(fen, depth, expectedTotalMoves, ChessVariant.STANDARD);
         });
-
     }
 
-    private void perftDepth(String fen, int depth, long expectedTotalMoves) {
-        new PerftTest() {
+    @Test
+    @DisabledIfSystemProperty(named="perftChess960Depth", matches = "0")
+    void testChess960PerftSuite() throws IOException {
+		final int depth = Integer.getInteger("perftChess960Depth", 2);
+        List<String> lines = Files.readAllLines(Paths.get("src/test/resources/perft_chess960_suite.epd"));
+		System.out.println("chess960 perft depth: "+depth+", "+lines.size()+" lines");
+        lines.stream().parallel().forEach(line -> {
+            String[] parts = line.split(";");
+            String fen = parts[0];
+            if (parts.length<=depth) {
+            	return;
+            }
+            long expectedTotalMoves = Long.parseLong(parts[depth].split(" ")[1].trim());
+            perftDepth(fen, depth, expectedTotalMoves, ChessVariant.CHESS960);
+        });
+    }
+
+    private void perftDepth(String fen, int depth, long expectedTotalMoves, ChessVariant variant) {
+        final PerftTest perft = new PerftTest() {
             @Override
             protected String getFen() {
                 return fen;
@@ -59,7 +57,9 @@ public class PerftSuiteTest {
             protected String getSubFolder() {
                 return null;
             }
-        }.perft(depth, expectedTotalMoves);
+        };
+        perft.setVariant(variant);
+		perft.perft(depth, expectedTotalMoves);
     }
 
 }
