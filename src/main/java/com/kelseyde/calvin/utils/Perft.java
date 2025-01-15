@@ -15,27 +15,26 @@ import java.util.Map;
  */
 public class Perft {
 
-    private final MoveGenerator movegen = new MoveGenerator();
-
     public long nodesSearched = 0;
     private Map<Move, Long> nodesPerMove;
 
     public long perft(Board board, int depth) {
-        nodesSearched = 0;
+    	final MoveGenerator movegen = new MoveGenerator();
+    	nodesSearched = 0;
         nodesPerMove = new HashMap<>();
 
-        long totalNodes = perft(board, depth, depth);
-
+        long totalNodes = perft(board, movegen, depth, depth);
+/*
         nodesPerMove.entrySet().stream()
                 .sorted(Comparator.comparing(entry -> Move.toUCI(entry.getKey())))
                 .forEach(entry -> System.out.printf("%s: %s%n", Move.toUCI(entry.getKey()), entry.getValue()));
-        System.out.printf("Nodes searched: %s%n", totalNodes);
+        System.out.printf("Nodes searched: %s%n", totalNodes);*/
 
         return totalNodes;
     }
 
-    public long perft(Board board, int depth, int originalDepth) {
-        nodesSearched++;
+    private long perft(Board board, MoveGenerator movegen, int depth, int originalDepth) {
+    	nodesSearched++;
         List<Move> moves = movegen.generateMoves(board);
         if (depth == 1) {
             return moves.size();
@@ -43,7 +42,7 @@ public class Perft {
         long totalMoveCount = 0;
         for (Move move : moves) {
             board.makeMove(move);
-            long moveCount = perft(board, depth - 1, originalDepth);
+            long moveCount = perft(board, movegen, depth - 1, originalDepth);
             if (depth == originalDepth) {
                 nodesPerMove.put(move, moveCount);
             }
