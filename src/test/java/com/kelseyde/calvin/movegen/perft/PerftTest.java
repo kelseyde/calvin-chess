@@ -16,24 +16,27 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 public abstract class PerftTest {
-
-    private static final Perft PERFT = new Perft();
-
+	private ChessVariant variant;
     protected abstract String getFen();
     protected abstract String getSubFolder();
+    
+    protected PerftTest() {
+    	this.variant = ChessVariant.STANDARD;
+    }
 
     protected void perft(int depth, long expectedTotalMoves) {
         Board board = FEN.toBoard(getFen());
-        board.setVariant(ChessVariant.CHESS960);
+        board.setVariant(variant);
         Instant start = Instant.now();
-        long totalMoveCount = PERFT.perft(board, depth);
-        long totalNodeCount = PERFT.nodesSearched;
-        System.out.println("totalMoveCount: " + totalNodeCount);
+        final Perft perft = new Perft();
+		long totalMoveCount = perft.perft(board, depth);
+        long totalNodeCount = perft.nodesSearched;
+//        System.out.println("totalMoveCount: " + totalNodeCount);
         Instant end = Instant.now();
         Duration performance = Duration.between(start, end);
 
         float nps = (float) totalNodeCount / ((float) performance.toNanos() / 1000000);
-        System.out.println("nps: " + nps);
+//        System.out.println("nps: " + nps);
         if (expectedTotalMoves == totalMoveCount && getSubFolder() != null) {
             writeResults(depth, performance);
         }
@@ -53,4 +56,7 @@ public abstract class PerftTest {
         }
     }
 
+	public void setVariant(ChessVariant variant) {
+		this.variant = variant;
+	}
 }
