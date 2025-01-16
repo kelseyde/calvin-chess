@@ -16,12 +16,12 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
 public abstract class PerftTest {
-	private ChessVariant variant;
+    private ChessVariant variant;
     protected abstract String getFen();
     protected abstract String getSubFolder();
     
     protected PerftTest() {
-    	this.variant = ChessVariant.STANDARD;
+        this.variant = ChessVariant.STANDARD;
     }
 
     protected void perft(int depth, long expectedTotalMoves) {
@@ -29,24 +29,23 @@ public abstract class PerftTest {
         board.setVariant(variant);
         Instant start = Instant.now();
         final Perft perft = new Perft();
-		long totalMoveCount = perft.perft(board, depth);
-        long totalNodeCount = perft.nodesSearched;
-//        System.out.println("totalMoveCount: " + totalNodeCount);
+        Perft.Result result = perft.perft(board, depth);
+        System.out.println("totalMoveCount: " + result.leafNodesCount());
         Instant end = Instant.now();
         Duration performance = Duration.between(start, end);
 
-        float nps = (float) totalNodeCount / ((float) performance.toNanos() / 1000000);
-//        System.out.println("nps: " + nps);
-        if (expectedTotalMoves == totalMoveCount && getSubFolder() != null) {
+        float nps = (float) result.searchedNodesCount() / ((float) performance.toNanos() / 1000000);
+        System.out.println("nps: " + nps);
+        if (expectedTotalMoves == result.leafNodesCount() && getSubFolder() != null) {
             writeResults(depth, performance);
         }
-        Assertions.assertEquals(expectedTotalMoves, totalMoveCount,
-                String.format("Fen: %s, Depth: %s, Expected: %s, Actual: %s", getFen(), depth, expectedTotalMoves, totalMoveCount));
+        Assertions.assertEquals(expectedTotalMoves, result.leafNodesCount(),
+                String.format("Fen: %s, Depth: %s, Expected: %s, Actual: %s", getFen(), depth, expectedTotalMoves, result.leafNodesCount()));
     }
 
     private void writeResults(int depth, Duration performance) {
         Instant timestamp = Instant.now().truncatedTo(ChronoUnit.SECONDS);
-        String line = String.format("%s,%s\n", timestamp, performance);
+        String line = String.format("%s,%s%n", timestamp, performance);
         String fileName = String.format("src/test/resources/perft/%s/perft_depth_%s.csv", getSubFolder(), depth);
         Path path = Paths.get(fileName);
         try {
@@ -56,7 +55,7 @@ public abstract class PerftTest {
         }
     }
 
-	public void setVariant(ChessVariant variant) {
-		this.variant = variant;
-	}
+    public void setVariant(ChessVariant variant) {
+        this.variant = variant;
+    }
 }
