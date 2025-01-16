@@ -4,52 +4,76 @@ import com.kelseyde.calvin.board.Board;
 import com.kelseyde.calvin.board.Move;
 import com.kelseyde.calvin.movegen.MoveGenerator;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Perft, ('Performance Test') is a debugging function to walk the move generation tree of strictly legal moves to count
- * all the leaf nodes of a certain depth, which is compared to predetermined values and used to isolate bugs.
+ * href="https://www.chessprogramming.org/Perft">Perft, ('Performance Test')</a> is a Performance Test is a debugging function
+ * that walks the move generation tree of strictly legal moves to count all the leaf nodes of a certain depth,
+ * which can be compared to predetermined values and used to isolate bugs.
  */
 public class Perft {
 
-    public long nodesSearched = 0;
-    private Map<Move, Long> nodesPerMove;
+    /**
+     * The results of a Perft (Performance Test) calculation.
+     */
+    public static class Result {
+        private long searchedNodesCount;
+        private long leafNodesCount;
+        private final Map<Move, Long> nodesPerMove;
 
-    public long perft(Board board, int depth) {
-    	final MoveGenerator movegen = new MoveGenerator();
-    	nodesSearched = 0;
-        nodesPerMove = new HashMap<>();
+        private Result() {
+             this.nodesPerMove = new HashMap<>();
+        }
+        /** Gets the number of leaf nodes
+         * @return a long
+         */
+        public long leafNodesCount() {
+            return leafNodesCount;
+        }
 
-        long totalNodes = perft(board, movegen, depth, depth);
-/*
-        nodesPerMove.entrySet().stream()
-                .sorted(Comparator.comparing(entry -> Move.toUCI(entry.getKey())))
-                .forEach(entry -> System.out.printf("%s: %s%n", Move.toUCI(entry.getKey()), entry.getValue()));
-        System.out.printf("Nodes searched: %s%n", totalNodes);*/
+        /** Gets the number of nodes for which the move generation has been done
+         * @return a long
+         */
+        public long searchedNodesCount() {
+            return searchedNodesCount;
+        }
 
-        return totalNodes;
+        /** Gets the number of nodes per move at first depth
+         * @return a map of moves to the number of nodes
+         */
+        public Map<Move, Long> divide() {
+            return nodesPerMove;
+        }
+    }
+    
+    /** Performs a Perft (Performance Test) calculation.
+     * @return a non null result
+     */
+    public Result perft(Board board, int depth) {
+        final MoveGenerator movegen = new MoveGenerator();
+        final Result result = new Result();
+        result.leafNodesCount = perft(board, movegen, result, depth, depth);
+        return result;
     }
 
-    private long perft(Board board, MoveGenerator movegen, int depth, int originalDepth) {
-    	nodesSearched++;
+    private long perft(Board board, MoveGenerator movegen, Result result, int depth, int originalDepth) {
+        result.searchedNodesCount++;
         List<Move> moves = movegen.generateMoves(board);
         if (depth == 1) {
             return moves.size();
         }
-        long totalMoveCount = 0;
+        long leafNodesCount = 0;
         for (Move move : moves) {
             board.makeMove(move);
-            long moveCount = perft(board, movegen, depth - 1, originalDepth);
+            long moveCount = perft(board, movegen, result, depth - 1, originalDepth);
             if (depth == originalDepth) {
-                nodesPerMove.put(move, moveCount);
+                result.nodesPerMove.put(move, moveCount);
             }
-            totalMoveCount += moveCount;
+            leafNodesCount += moveCount;
             board.unmakeMove();
         }
-        return totalMoveCount;
+        return leafNodesCount;
     }
-
 }
