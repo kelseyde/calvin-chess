@@ -14,6 +14,15 @@ import java.util.Map;
  * which can be compared to predetermined values and used to isolate bugs.
  */
 public class Perft {
+    /** The type of Perft calculation.
+     * <br>Please note that as Calvin move generator generates only legal moves both type should yield the same result.
+     */
+    public enum Type {
+        /** A non bulk Perft (Performance Test) calculation; moves at last depth are not played  */
+        NON_BULK,
+        /** A bulk Perft (Performance Test) calculation. */
+        BULK
+    }
 
     /**
      * The results of a Perft (Performance Test) calculation.
@@ -33,7 +42,7 @@ public class Perft {
             return leafNodesCount;
         }
 
-        /** Gets the number of nodes for which the move generation has been done
+        /** Gets the number of nodes for which the move generation has been searched
          * @return a long
          */
         public long searchedNodesCount() {
@@ -48,26 +57,43 @@ public class Perft {
         }
     }
     
-    /** Performs a Perft (Performance Test) calculation.
+    /** Performs a non bulk Perft (Performance Test) calculation.
+     * @param board The board to run the performance test on.
+     * @param depth The depth to run the performance test to
      * @return a non null result
      */
     public Result perft(Board board, int depth) {
+        return perft(board, depth, Type.NON_BULK);
+    }
+
+    /**  Performs a Perft (Performance Test) calculation.
+     * @param board The board to run the performance test on.
+     * @param depth The depth to run the performance test to
+     * @param type The type of Perft to run
+     * @return a non null result
+     */
+    public Result perft(Board board, int depth, Type type) {
+    	if (depth<=0) {
+    		throw new IllegalArgumentException("Depth must be greater than 0");
+    	}
         final MoveGenerator movegen = new MoveGenerator();
         final Result result = new Result();
-        result.leafNodesCount = perft(board, movegen, result, depth, depth);
+        result.leafNodesCount = perft(board, movegen, result, depth, depth, type);
         return result;
     }
 
-    private long perft(Board board, MoveGenerator movegen, Result result, int depth, int originalDepth) {
+    private long perft(Board board, MoveGenerator movegen, Result result, int depth, int originalDepth, Type type) {
         result.searchedNodesCount++;
-        List<Move> moves = movegen.generateMoves(board);
-        if (depth == 1) {
+        final List<Move> moves = movegen.generateMoves(board);
+        if (depth == 1 && type == Type.NON_BULK) {
             return moves.size();
+        } else if (depth == 0) {
+            return 1;
         }
         long leafNodesCount = 0;
         for (Move move : moves) {
             board.makeMove(move);
-            long moveCount = perft(board, movegen, result, depth - 1, originalDepth);
+            long moveCount = perft(board, movegen, result, depth - 1, originalDepth, type);
             if (depth == originalDepth) {
                 result.nodesPerMove.put(move, moveCount);
             }
