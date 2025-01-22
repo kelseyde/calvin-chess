@@ -189,11 +189,11 @@ public record Move(short value) {
         if (move == null) return "-";
         final String notation = Square.toNotation(move.from()) + Square.toNotation(move.to());
         final Piece promoPiece = move.promoPiece();
-		return promoPiece == null ? notation : notation + promoPiece.code();
+        return promoPiece == null ? notation : notation + promoPiece.code();
     }
 
-	@Override
-	public String toString() {
-		return toUCI(this);
-	}
+    @Override
+    public String toString() {
+        return toUCI(this);
+    }
 }
