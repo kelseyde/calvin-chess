@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * href="https://www.chessprogramming.org/Perft">Perft, ('Performance Test')</a> is a Performance Test is a debugging function
+ * <a href="https://www.chessprogramming.org/Perft">Perft, ('Performance Test')</a> is a Performance Test is a debugging function
  * that walks the move generation tree of strictly legal moves to count all the leaf nodes of a certain depth,
  * which can be compared to predetermined values and used to isolate bugs.
  */
