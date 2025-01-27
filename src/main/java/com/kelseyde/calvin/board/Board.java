@@ -591,6 +591,17 @@ public class Board {
                 (getKnights(true) != 0 || getBishops(true) != 0 || getRooks(true) != 0 || getQueens(true) != 0) :
                 (getKnights(false) != 0 || getBishops(false) != 0 || getRooks(false) != 0 || getQueens(false) != 0);
     }
+    
+    /** Tests whether a specified player has a <a href="https://en.wikipedia.org/wiki/Bishop_pair">bishop pair</a> (two bishops on different color squares).
+     * @param white the colour of the player to check
+     * @return true if the board has a bishop pair of the specified player, false otherwise
+     */
+    public boolean hasBishopPair(boolean white) {
+        final long bishops = getBishops(white);
+        final long bishopsOnWhiteSquares = bishops & Square.WHITE;
+        return bishops!=bishopsOnWhiteSquares && bishopsOnWhiteSquares!=0;
+    }
+
 
     public static Board from(String fen) {
         return FEN.toBoard(fen);

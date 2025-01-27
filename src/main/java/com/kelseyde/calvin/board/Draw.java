@@ -9,10 +9,10 @@ public final class Draw {
     }
 
     /** Checks if the board is a draw due to any of the standard chess rules.
-     * @return true if {@link #isThreefoldRepetition} or {@link #isFiftyMoveRule} or {@link #isInsufficientMaterial} or {@link #isStalemate} is true
+     * @return true if {@link #isThreefoldRepetition} or {@link #isFiftyMoveRule} or {@link #isInsufficientMaterialFIDERule(Board)} or {@link #isStalemate} is true
      */
     public static boolean isDraw(Board board, MoveGenerator moveGenerator) {
-        return isThreefoldRepetition(board) || isFiftyMoveRule(board) || isInsufficientMaterial(board) || isStalemate(board, moveGenerator);
+        return isThreefoldRepetition(board) || isFiftyMoveRule(board) || isInsufficientMaterialFIDERule(board) || isStalemate(board, moveGenerator);
     }
 
     /** Checks if the board can be considered as a draw by an engine.
@@ -34,7 +34,8 @@ public final class Draw {
         long zobrist = board.getState().getKey();
         BoardState[] states = board.getStates();
         // No need to check the positions after the last half move clock reset as they are not reproducible
-        int lastReproductiblePly = board.getPly() - board.getState().getHalfMoveClock();
+        // Warning, ply may be less than half move clock if initialized with a FEN different from the start one
+        int lastReproductiblePly = Math.max(board.getPly() - board.getState().getHalfMoveClock(), 0);
         for (int i = board.getPly() - 2; i >= lastReproductiblePly; i=i-2) {
             // decrement i by 2 as we can skip the positions where the player to move is not the current one
             if (states[i].getKey() == zobrist) {
@@ -59,7 +60,8 @@ public final class Draw {
         long zobrist = board.getState().getKey();
         BoardState[] states = board.getStates();
         // No need to check the positions after the last half move clock reset as they are not reproducible
-        int lastReproductiblePly = board.getPly() - board.getState().getHalfMoveClock();
+        // Warning, ply may be less than half move clock if initialized with a FEN different from the start one
+        int lastReproductiblePly = Math.max(board.getPly() - board.getState().getHalfMoveClock(), 0);
         for (int i = board.getPly() - 2; i >= lastReproductiblePly; i=i-2) {
             // decrement i by 2 as we can skip the positions where the player to move is not the current one
             if (states[i].getKey() == zobrist) {
@@ -69,19 +71,80 @@ public final class Draw {
         return false;
     }
 
-    /** Checks if the current position is a draw due to an <a href="https://en.wikipedia.org/wiki/Insufficient_material">insufficient material</a>
-     * (also known as dead) position.
+    /** Checks if the current position where the material is insufficient to force a mate, without the collaboration of the opponent.
+     * <br>This includes the FIDE rules (see {@link #isInsufficientMaterialFIDERule(Board board)}) situations and others, for instance
+     * when both opponents have bishops of opposite colors, or one have two knights and the other only its king.<br>
      * @return true if the current position is an insufficient material position
+     * @see <a href="https://rustic-chess.org/board_functionality/detecting_cant_force_mate.html">How to detect can't force_mate</a>
      */
     public static boolean isInsufficientMaterial(Board board) {
         if (board.getPawns() != 0 || board.getRooks() != 0 || board.getQueens() != 0) {
+            // There's at least a rook, a queen or a pawn, it's not an insufficient material position
             return false;
         }
-        long whitePieces = board.getKnights(true) | board.getBishops(true);
-        long blackPieces = board.getKnights(false) |  board.getBishops(false);
+        // There's only light pieces and kings
+        final int whiteBishops = Bits.count(board.getBishops(true));
+        final int blackBishops = Bits.count(board.getBishops(false));
+        final int whiteKnights = Bits.count(board.getKnights(true));
+        final int blackKnights = Bits.count(board.getKnights(false));
+        final int whiteLightPieces = whiteBishops + whiteKnights;
+        final int blackLightPieces = blackBishops + blackKnights;
+        if (whiteLightPieces <= 1 && blackLightPieces <= 1) {
+            // None have two light pieces, it's an insufficient material position (typically, knight vs knight is considered as an insufficient material position)
+            return true;
+        }
+        // There's at least one player with two or more light pieces
+        // First check if we are in a bishops vs lonely king situation
+        if (whiteKnights + blackKnights == 0 && (whiteBishops==0 || blackBishops==0)) {
+            // None have knights one have all bishops the other has a king
+            final long bishops = board.getBishops();
+            final long white = bishops & Square.WHITE;
+            // This is a draw if and only if all bishops are on same color cells
+            return bishops==white || white==0;
+        }
+        // There's at least one knight on the board and a player has two light pieces,
+        // If there's more than two light pieces, it's not an insufficient material position.
+        if (whiteLightPieces + blackLightPieces > 2) {
+            // There's more than two light pieces and at least one knight
+            return false;
+        }
+        // One player has two light pieces, the other has none
+        // Two knights vs lonely king is considered as an insufficient material position, knight+bishop vs lonely king is not
+        return (whiteLightPieces>0 && whiteBishops==0) || (blackLightPieces>0 && blackBishops==0);
+    }
 
-        return (Bits.count(whitePieces) == 0 || Bits.count(whitePieces) == 1)
-                && (Bits.count(blackPieces) == 0 || Bits.count(blackPieces) == 1);
+    /** Checks if the current position is a draw due to the <a href="https://en.wikipedia.org/wiki/Insufficient_material">insufficient material FIDE rule</a>.
+     * @return true if the current position is a draw due to the insufficient material FIDE rule
+     * @see <a href="https://rustic-chess.org/board_functionality/detecting_fide_draws.html">How to detect draw according to the FIDE rules</a>
+     */
+    public static boolean isInsufficientMaterialFIDERule(Board board) {
+        if (board.getPawns() != 0 || board.getRooks() != 0 || board.getQueens() != 0) {
+            // There's at least a rook, a queen or a pawn, it's not an insufficient material position
+            return false;
+        }
+        // There's only light pieces and kings
+        final int whiteBishops = Bits.count(board.getBishops(true));
+        final int blackBishops = Bits.count(board.getBishops(false));
+        final int whiteKnights = Bits.count(board.getKnights(true));
+        final int blackKnights = Bits.count(board.getKnights(false));
+        final int lightPieces = whiteBishops + blackBishops + whiteKnights + blackKnights;
+        if (lightPieces <2) {
+            // There's 0 or 1 light piece remaining, its a draw
+            return true;
+        }
+        if (whiteKnights + blackKnights >0) {
+            // If there's at least one knight and another piece (because lightPieces >=2), draw can't be claimed
+            return false;
+        }
+        // There's only bishops and kings
+        if (board.hasBishopPair(true) || board.hasBishopPair(false)) {
+            // At least one player has a bishop pair, draw can't be claimed
+            return false;
+        }
+        // There's only bishops and kings and no bishop pair, if bishops are all on squares of the same color, it's a draw.
+        final long bishops = board.getBishops();
+        final long whiteSquaresWithBishops = bishops & Square.WHITE;
+        return whiteSquaresWithBishops==0 || whiteSquaresWithBishops==bishops;
     }
 
     /** Checks if the current position is a draw due to the <a href="https://en.wikipedia.org/wiki/Fifty-move_rule">fifty-move rule</a>.
@@ -95,6 +158,6 @@ public final class Draw {
      * @return true if the board is a draw due to a stalemate
      */
     public static boolean isStalemate(Board board, MoveGenerator moveGenerator) {
-        return !moveGenerator.isCheck(board, !board.isWhite()) && moveGenerator.generateMoves(board).isEmpty();
+        return !moveGenerator.isCheck(board, board.isWhite()) && moveGenerator.generateMoves(board).isEmpty();
     }
 }
