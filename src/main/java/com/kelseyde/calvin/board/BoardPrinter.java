@@ -57,8 +57,8 @@ public class BoardPrinter {
 		return white ? piece.code().toUpperCase() : piece.code();
 	}
 	
-	private String getBitCell(Long bitBoard, int sq) {
-        boolean piece = (bitBoard & (Bits.of(sq))) != 0;
+	private String getBitCell(Long board, int sq) {
+        boolean piece = (board & (Bits.of(sq))) != 0;
         return piece ? "1" : " ";
     }
 

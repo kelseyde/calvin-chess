@@ -73,9 +73,8 @@ public class Bits {
      * Prints the bitboard to the standard output.
      *  Use {@link BoardPrinter#print(long)} or {@link #toString(long)} instead.
      */
-    public static void print(long bb) {
-    	new BoardPrinter(System.out::println).print(bb);
-    	System.out.println();
+    public static void print(long board) {
+    	System.out.println(toString(board));
     }
     
     public static String toString(long board) {
