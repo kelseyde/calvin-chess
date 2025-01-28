@@ -183,17 +183,17 @@ public record Move(short value) {
     /**
      * Generates a UCI representation of a move (e.g. "e2e4").
      * @param move The move
-     * @return The UCI notation
+     * @return The UCI notation ("-" if move is null)
      */
     public static String toUCI(Move move) {
         if (move == null) return "-";
         final String notation = Square.toNotation(move.from()) + Square.toNotation(move.to());
         final Piece promoPiece = move.promoPiece();
-        return promoPiece == null ? notation : notation + promoPiece.code();
+		return promoPiece == null ? notation : notation + promoPiece.code();
     }
 
-    @Override
-    public String toString() {
-        return toUCI(this);
-    }
+	@Override
+	public String toString() {
+		return toUCI(this);
+	}
 }

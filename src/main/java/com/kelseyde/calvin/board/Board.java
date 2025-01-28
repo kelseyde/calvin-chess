@@ -641,30 +641,22 @@ public class Board {
         return newBoard;
     }
 
+    @Deprecated(forRemoval = true)
+    /** @deprecated
+     * Prints the board to the standard output.
+     *  Use {@link BoardPrinter#print(Board))} or {@link #toString()} instead.
+     */
     public void print() {
-
-        for (int rank = 7; rank >= 0; --rank) {
-            System.out.print(" +---+---+---+---+---+---+---+---+\n");
-
-            for (int file = 0; file < 8; ++file) {
-                int sq = Square.of(rank, file);
-                Piece piece = pieceAt(sq);
-                if (piece == null) {
-                    System.out.print(" |  ");
-                    continue;
-                }
-                boolean white = (getWhitePieces() & Bits.of(sq)) != 0;
-                System.out.print(" | " + (white ? piece.code().toUpperCase() : piece.code()));
-            }
-
-            System.out.print(" | " + (rank + 1) + "\n");
-        }
-
-        System.out.print(" +---+---+---+---+---+---+---+---+\n");
-        System.out.print("   a   b   c   d   e   f   g   h\n\n");
-
-        System.out.print((white ? "White" : "Black") + " to move\n");
-
+        System.out.println(this);
     }
 
+    @Override
+    public String toString() {
+        final StringBuilder builder = new StringBuilder();
+        new BoardPrinter(BoardPrinter.getConsumer(builder)).print(this);
+        builder.append('\n');
+        builder.append(white ? "White" : "Black");
+        builder.append(" to move");
+        return builder.toString();
+    }
 }

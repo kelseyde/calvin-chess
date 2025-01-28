@@ -68,22 +68,20 @@ public class Bits {
         return squares;
     }
 
+    @Deprecated(forRemoval = true)
+    /** @deprecated
+     * Prints the bitboard to the standard output.
+     *  Use {@link BoardPrinter#print(long)} or {@link #toString(long)} instead.
+     */
     public static void print(long bb) {
-
-        for (int rank = 7; rank >= 0; --rank) {
-            System.out.print(" +---+---+---+---+---+---+---+---+\n");
-
-            for (int file = 0; file < 8; ++file) {
-                boolean piece = (bb & (Bits.of(Square.of(rank, file)))) != 0;
-                System.out.print(" | " + (piece ? '1' : ' '));
-            }
-
-            System.out.print(" | "  + (rank + 1) + "\n");
-        }
-
-        System.out.print(" +---+---+---+---+---+---+---+---+\n");
-        System.out.print("   a   b   c   d   e   f   g   h\n\n");
-
+    	new BoardPrinter(System.out::println).print(bb);
+    	System.out.println();
     }
-
+    
+    public static String toString(long board) {
+        final StringBuilder builder = new StringBuilder();
+        new BoardPrinter(BoardPrinter.getConsumer(builder)).print(board);
+        builder.deleteCharAt(builder.length()-1);
+        return builder.toString();
+    }
 }
