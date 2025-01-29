@@ -1,65 +1,71 @@
 package com.kelseyde.calvin.movegen.perft;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIfSystemProperty;
 
+import com.kelseyde.calvin.board.Board;
+import com.kelseyde.calvin.board.ChessVariant;
+import com.kelseyde.calvin.utils.Perft;
+import com.kelseyde.calvin.utils.Perft.Result;
+import com.kelseyde.calvin.utils.Perft.Type;
+import com.kelseyde.calvin.utils.notation.FEN;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.List;
 
-public class PerftSuiteTest {
+class PerftSuiteTest {
 
     @Test
-    @Disabled
-    public void testPerftSuite() throws IOException {
+    @DisabledIfSystemProperty(named="perftDepth", matches = "0")
+    void testPerftSuite() throws IOException {
+    	doTestSuite("perftDepth", 2, Files.readAllLines(Paths.get("src/test/resources/perft_suite.epd")), ChessVariant.STANDARD);
+    }
 
-        List<String> lines = Files.readAllLines(Paths.get("src/test/resources/perft_suite.epd"));
-        lines.forEach(line -> {
-
+    @Test
+    @DisabledIfSystemProperty(named="perftChess960Depth", matches = "0")
+    void testChess960PerftSuite() throws IOException {
+    	doTestSuite("perftChess960Depth", 2, Files.readAllLines(Paths.get("src/test/resources/perft_chess960_suite.epd")), ChessVariant.CHESS960);
+    }
+    
+    private void doTestSuite(String depthProperty, int defaultDepth, List<String> testLines, ChessVariant variant) {
+		final int depth = Integer.getInteger(depthProperty, defaultDepth);
+        if (depth!=defaultDepth) {
+        	System.out.println(depthProperty+": "+depth+", "+testLines.size()+" lines");
+        }
+        testLines.stream().parallel().forEach(line -> {
             String[] parts = line.split(";");
             String fen = parts[0];
-            if (parts.length > 1) {
-                long expectedTotalMoves = Long.parseLong(parts[1].split(" ")[1].trim());
-                perftDepth(fen, 1, expectedTotalMoves);
+            if (parts.length<=depth) {
+            	return;
             }
-            if (parts.length > 2) {
-                long expectedTotalMoves = Long.parseLong(parts[2].split(" ")[1].trim());
-                perftDepth(fen, 2, expectedTotalMoves);
-            }
-            if (parts.length > 3) {
-                long expectedTotalMoves = Long.parseLong(parts[3].split(" ")[1].trim());
-                perftDepth(fen, 3, expectedTotalMoves);
-            }
-            if (parts.length > 4) {
-                long expectedTotalMoves = Long.parseLong(parts[4].split(" ")[1].trim());
-                perftDepth(fen, 4, expectedTotalMoves);
-            }
-            if (parts.length > 5) {
-                long expectedTotalMoves = Long.parseLong(parts[5].split(" ")[1].trim());
-                perftDepth(fen, 5, expectedTotalMoves);
-            }
-            if (parts.length > 6) {
-                long expectedTotalMoves = Long.parseLong(parts[6].split(" ")[1].trim());
-                perftDepth(fen, 6, expectedTotalMoves);
-            }
-
+            long expectedTotalMoves = Long.parseLong(parts[depth].split(" ")[1].trim());
+            final Board board = FEN.toBoard(fen);
+            board.setVariant(variant);
+            final Result result = new Perft().perft(board, depth);
+            assertEquals(expectedTotalMoves, result.leafNodesCount(), String.format("Fen: %s, Depth: %s, Expected: %s, Actual: %s", fen, depth, expectedTotalMoves, result.leafNodesCount()));
         });
-
     }
 
-    private void perftDepth(String fen, int depth, long expectedTotalMoves) {
-        new PerftTest() {
-            @Override
-            protected String getFen() {
-                return fen;
-            }
-
-            @Override
-            protected String getSubFolder() {
-                return null;
-            }
-        }.perft(depth, expectedTotalMoves);
+    @Test
+    void bulkTest() {
+    	final Board board = Board.from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    	Result perft = new Perft().perft(board, 3);
+    	final long count = perft.leafNodesCount();
+    	perft = new Perft().perft(board, 3, Type.BULK);
+    	assertEquals(count, perft.leafNodesCount());
     }
 
+    @Test
+    void wrongDepthTest() {
+    	final Board board = Board.from("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+    	final Perft p = new Perft();
+    	assertThrows(IllegalArgumentException.class, () -> p.perft(board, -1));
+    }
 }
