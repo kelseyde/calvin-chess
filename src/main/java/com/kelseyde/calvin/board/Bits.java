@@ -67,15 +67,6 @@ public class Bits {
         }
         return squares;
     }
-
-    @Deprecated(forRemoval = true)
-    /** @deprecated
-     * Prints the bitboard to the standard output.
-     *  Use {@link BoardPrinter#print(long)} or {@link #toString(long)} instead.
-     */
-    public static void print(long board) {
-    	System.out.println(toString(board));
-    }
     
     public static String toString(long board) {
         final StringBuilder builder = new StringBuilder();

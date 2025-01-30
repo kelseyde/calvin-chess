@@ -641,15 +641,6 @@ public class Board {
         return newBoard;
     }
 
-    @Deprecated(forRemoval = true)
-    /** @deprecated
-     * Prints the board to the standard output.
-     *  Use {@link BoardPrinter#print(Board))} or {@link #toString()} instead.
-     */
-    public void print() {
-        System.out.println(this);
-    }
-
     @Override
     public String toString() {
         final StringBuilder builder = new StringBuilder();
