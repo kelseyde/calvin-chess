@@ -183,7 +183,7 @@ public record Move(short value) {
     /**
      * Generates a UCI representation of a move (e.g. "e2e4").
      * @param move The move
-     * @return The UCI notation
+     * @return The UCI notation ("-" if move is null)
      */
     public static String toUCI(Move move) {
         if (move == null) return "-";
