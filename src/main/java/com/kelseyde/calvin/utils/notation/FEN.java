@@ -11,11 +11,16 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 public class FEN {
+    private FEN() {
+        super();
+    }
 
     public static final String STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     public static Board toBoard(String fen) {
-
+            if (fen==null) {
+                throw new IllegalArgumentException();
+            }
             String[] parts = fen.split(" ");
             String[] files = parts[0].split("/");
 
