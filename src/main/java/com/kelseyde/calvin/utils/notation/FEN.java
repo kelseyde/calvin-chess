@@ -10,46 +10,53 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+/** 
+ * Converts a Board to and from a <a href="https://www.chessprogramming.org/Forsyth-Edwards_Notation">Forsyth-Edwards Notation</a>
+ */
 public class FEN {
     private FEN() {
         super();
     }
 
+    /**
+     * The standard starting position in Forsyth-Edwards Notation.
+     */
     public static final String STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
-    public static Board toBoard(String fen) {
-            if (fen==null) {
-                throw new IllegalArgumentException();
-            }
-            String[] parts = fen.split(" ");
-            String[] files = parts[0].split("/");
+    private static final class PiecesParser {
+        private static final String noPieceCode = "x";
+        private long whitePawns = 0L;
+        private long whiteKnights = 0L;
+        private long whiteBishops = 0L;
+        private long whiteRooks = 0L;
+        private long whiteQueens = 0L;
+        private long whiteKing = 0L;
+        private long blackPawns = 0L;
+        private long blackKnights = 0L;
+        private long blackBishops = 0L;
+        private long blackRooks = 0L;
+        private long blackQueens = 0L;
+        private long blackKing = 0L;
 
-            long whitePawns = 0L;
-            long whiteKnights = 0L;
-            long whiteBishops = 0L;
-            long whiteRooks = 0L;
-            long whiteQueens = 0L;
-            long whiteKing = 0L;
-            long blackPawns = 0L;
-            long blackKnights = 0L;
-            long blackBishops = 0L;
-            long blackRooks = 0L;
-            long blackQueens = 0L;
-            long blackKing = 0L;
-
+        PiecesParser (String[] files) {
             List<List<String>> rankFileHash = Arrays.stream(files)
                     .map(file -> Arrays.stream(file.split(""))
-                            .flatMap(FEN::parseSquare)
+                            .flatMap(this::parseSquare)
                             .toList())
                     .collect(Collectors.toList());
+            if (rankFileHash.size() != 8) {
+                throw new IllegalArgumentException("Illegal FEN: rank count is not 8!");
+            }
             Collections.reverse(rankFileHash);
-
             for (int rankIndex = 0; rankIndex < rankFileHash.size(); rankIndex++) {
-                List<String> rank = rankFileHash.get(rankIndex);
+                final List<String> rank = rankFileHash.get(rankIndex);
+                if (rank.size() != 8) {
+                    throw new IllegalArgumentException("Illegal FEN: file count is not 8!");
+                }
                 for (int fileIndex = 0; fileIndex < rank.size(); fileIndex++) {
-                    int square = Square.of(rankIndex, fileIndex);
-                    String squareValue = rank.get(fileIndex);
-                    long squareBB = Bits.of(square);
+                    final int square = Square.of(rankIndex, fileIndex);
+                    final String squareValue = rank.get(fileIndex);
+                    final long squareBB = Bits.of(square);
                     switch (squareValue) {
                         case "P" -> whitePawns |= squareBB;
                         case "N" -> whiteKnights |= squareBB;
@@ -63,36 +70,84 @@ public class FEN {
                         case "r" -> blackRooks |= squareBB;
                         case "q" -> blackQueens |= squareBB;
                         case "k" -> blackKing |= squareBB;
+                        case noPieceCode -> {
+                            // No piece, do nothing
+                        }
+                        default -> illegalPiece(squareValue);
                     }
                 }
             }
+        }
+        
+        private Stream<String> parseSquare(String square) {
+            if (square.length() != 1) {
+                // A rank was empty
+                throw new IllegalArgumentException("Illegal FEN a rank can't be empty!");
+            }
+            if (Character.isLetter(square.charAt(0))) {
+                if (noPieceCode.equals(square)) {
+                    illegalPiece(square);
+                } else {
+                    return Stream.of(square);
+                }
+            }
+            return IntStream.range(0, Integer.parseInt(square)).mapToObj(i -> noPieceCode);
+        }
 
-            long pawns = whitePawns | blackPawns;
-            long knight = whiteKnights | blackKnights;
-            long bishops = whiteBishops | blackBishops;
-            long rooks = whiteRooks | blackRooks;
-            long queens = whiteQueens | blackQueens;
-            long king = whiteKing | blackKing;
-            long whitePieces = whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing;
-            long blackPieces = blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing;
+        private void illegalPiece(String piece) {
+            throw new IllegalArgumentException("Illegal FEN: " + piece + " is not a valid piece!");
+        }
 
-            boolean whiteToMove = parseSideToMove(parts[1]);
-            int castlingRights = parseCastlingRights(parts[2], whiteRooks, blackRooks, Bits.next(whiteKing), Bits.next(blackKing));
-            int enPassantFile = parseEnPassantFile(parts[3]);
-            int fiftyMoveCounter = parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0;
+        private void fillBoard(Board board) {
+            board.setPawns(whitePawns | blackPawns);
+            board.setKnights(whiteKnights | blackKnights);
+            board.setBishops(whiteBishops | blackBishops);
+            board.setRooks(whiteRooks | blackRooks);
+            board.setQueens(whiteQueens | blackQueens);
+            board.setKings(whiteKing | blackKing);
+            board.setWhitePieces(whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing);
+            board.setBlackPieces(blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing);
+            board.setPieces(calculatePieceList(board));
+        }
+        
+        private Piece[] calculatePieceList(Board board) {
+            final Piece[] pieceList = new Piece[Square.COUNT];
+            for (int square = 0; square < Square.COUNT; square++) {
+                final long squareMask = Bits.of(square);
+                if ((squareMask & board.getPawns()) != 0)           pieceList[square] = Piece.PAWN;
+                else if ((squareMask & board.getKnights()) != 0)    pieceList[square] = Piece.KNIGHT;
+                else if ((squareMask & board.getBishops()) != 0)    pieceList[square] = Piece.BISHOP;
+                else if ((squareMask & board.getRooks()) != 0)      pieceList[square] = Piece.ROOK;
+                else if ((squareMask & board.getQueens()) != 0)     pieceList[square] = Piece.QUEEN;
+                else if ((squareMask & board.getKings()) != 0)      pieceList[square] = Piece.KING;
+            }
+            return pieceList;
+        }
+    }
+
+    /** 
+     * Converts a Forsyth-Edwards Notation string to a Board
+     * @param fen the Forsyth-Edwards Notation string. Both half move clock and move counter are optional.
+     * <br>If half move clock is not provided, it is set to 0.
+     * <br>Move counter is ignored, due to a limitation of Board class that does not support it when played moves are not provided.
+     * @return the Board
+     * @throws IllegalArgumentException if the FEN string is not valid
+     */
+    public static Board toBoard(String fen) {
+            if (fen==null) {
+                throw new IllegalArgumentException();
+            }
+            final String[] parts = fen.split(" ");
+            final PiecesParser piecesParser = new PiecesParser(parts[0].split("/"));
+
+            final boolean whiteToMove = parseSideToMove(parts[1]);
+            final int castlingRights = parseCastlingRights(parts[2], piecesParser.whiteRooks, piecesParser.blackRooks, Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing));
+            final int enPassantFile = parseEnPassantFile(parts[3]);
+            final int fiftyMoveCounter = parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0;
             // This implementation does not require the full move counter (parts[5]).
 
-            Board board = new Board();
-            board.setBitboards(new long[Piece.COUNT + 2]);
-            board.setPawns(pawns);
-            board.setKnights(knight);
-            board.setBishops(bishops);
-            board.setRooks(rooks);
-            board.setQueens(queens);
-            board.setKings(king);
-            board.setWhitePieces(whitePieces);
-            board.setBlackPieces(blackPieces);
-            board.setPieces(calculatePieceList(board));
+            final Board board = new Board();
+            piecesParser.fillBoard(board);
             board.setWhite(whiteToMove);
             board.getState().setRights(castlingRights);
             board.getState().setEnPassantFile(enPassantFile);
@@ -102,9 +157,13 @@ public class FEN {
             board.getState().setNonPawnKeys(Key.generateNonPawnKeys(board));
 
             return board;
-
     }
 
+    /**
+     * Converts a Board to a Forsyth-Edwards Notation string
+     * @param board the Board
+     * @return the Forsyth-Edwards Notation string
+     */
     public static String toFEN(Board board) {
         try {
             StringBuilder sb = new StringBuilder();
@@ -273,30 +332,6 @@ public class FEN {
 
     private static String toFullMoveCounter(int ply) {
         return Integer.toString(1 + (ply / 2));
-    }
-
-    private static Stream<String> parseSquare(String square) {
-        if (square.length() != 1) {
-            throw new IllegalArgumentException("Illegal square char! " + square);
-        }
-        boolean isLetter = Character.isLetter(square.charAt(0));
-        return isLetter ? Stream.of(square) : IntStream.range(0, Integer.parseInt(square)).mapToObj(i -> "x");
-    }
-
-    public static Piece[] calculatePieceList(Board board) {
-
-        Piece[] pieceList = new Piece[Square.COUNT];
-        for (int square = 0; square < Square.COUNT; square++) {
-            long squareMask = Bits.of(square);
-            if ((squareMask & board.getPawns()) != 0)           pieceList[square] = Piece.PAWN;
-            else if ((squareMask & board.getKnights()) != 0)    pieceList[square] = Piece.KNIGHT;
-            else if ((squareMask & board.getBishops()) != 0)    pieceList[square] = Piece.BISHOP;
-            else if ((squareMask & board.getRooks()) != 0)      pieceList[square] = Piece.ROOK;
-            else if ((squareMask & board.getQueens()) != 0)     pieceList[square] = Piece.QUEEN;
-            else if ((squareMask & board.getKings()) != 0)      pieceList[square] = Piece.KING;
-        }
-        return pieceList;
-
     }
 
     private static int findRook(long rooks, boolean white, boolean kingside) {
