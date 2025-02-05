@@ -46,8 +46,7 @@ class PerftSuiteTest {
             	return;
             }
             long expectedTotalMoves = Long.parseLong(parts[depth].split(" ")[1].trim());
-            final Board board = FEN.toBoard(fen);
-            board.setVariant(variant);
+            final Board board = FEN.toBoard(fen, variant);
             final Result result = new Perft().perft(board, depth);
             assertEquals(expectedTotalMoves, result.leafNodesCount(), String.format("Fen: %s, Depth: %s, Expected: %s, Actual: %s", fen, depth, expectedTotalMoves, result.leafNodesCount()));
         });
