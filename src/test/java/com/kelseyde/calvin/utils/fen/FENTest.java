@@ -111,6 +111,8 @@ class FENTest {
         // Illegal castling : Both color has castling rights but rooks are not on the same file
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("1r2k1r1/ppp1pp2/3p2pp/5bn1/P7/2N2B2/1PPPPP2/1R2KR2 w Kk - 4 1", ChessVariant.CHESS960));
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("1r2kr2/ppp1pp2/3p2pp/5bn1/P7/2N2B2/1PPPPP2/R3KR2 w Qq - 4 1", ChessVariant.CHESS960));
+        // Two queen side castling defined
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("rr2k3/1pppqppp/2nb1n1b/pP6/4Q3/2NBBP1N/P1PPP1P1/RR2K3 w BQbq - 0 1", ChessVariant.CHESS960));
     }
     
     @Test
@@ -156,6 +158,14 @@ class FENTest {
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2n2n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R b KQq a6"));
         // Illegal en passant (no the right rank)
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2n2n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R w KQq a5 0 1"));
+        
+        // Two kings of same color
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2nk1n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R w - - 0 1"));
+        // No king for one color
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b4r/1pppqppp/2n2n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R w - - 0 1"));
+        
+        // Castling with shredder notation different from a or h files
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("1rb1k1r1/1pppqppp/2n2n1b/pP6/4Q3/2NB1P1N/P1PPP1P1/1RB1K1R1 w KQkq - 0 1"));
     }
 
 }
