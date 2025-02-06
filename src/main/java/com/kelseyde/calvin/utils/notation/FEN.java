@@ -24,7 +24,7 @@ public class FEN {
     public static final String STARTPOS = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
     private static final class PiecesParser {
-        private static final String noPieceCode = "x";
+        private static final String EMPTY_CELL = "x";
         private long whitePawns = 0L;
         private long whiteKnights = 0L;
         private long whiteBishops = 0L;
@@ -70,7 +70,7 @@ public class FEN {
                         case "r" -> blackRooks |= squareBB;
                         case "q" -> blackQueens |= squareBB;
                         case "k" -> blackKing |= squareBB;
-                        case noPieceCode -> {
+                        case EMPTY_CELL -> {
                             // No piece, do nothing
                         }
                         default -> illegalPiece(squareValue);
@@ -85,13 +85,13 @@ public class FEN {
                 throw new IllegalArgumentException("Illegal FEN a rank can't be empty!");
             }
             if (Character.isLetter(square.charAt(0))) {
-                if (noPieceCode.equals(square)) {
+                if (EMPTY_CELL.equals(square)) {
                     illegalPiece(square);
                 } else {
                     return Stream.of(square);
                 }
             }
-            return IntStream.range(0, Integer.parseInt(square)).mapToObj(i -> noPieceCode);
+            return IntStream.range(0, Integer.parseInt(square)).mapToObj(i -> EMPTY_CELL);
         }
 
         private void illegalPiece(String piece) {
@@ -154,25 +154,38 @@ public class FEN {
             final PiecesParser piecesParser = new PiecesParser(parts[0].split("/"));
 
             final boolean whiteToMove = parseSideToMove(parts[1]);
-            final int castlingRights = parseCastlingRights(parts[2], piecesParser.whiteRooks, piecesParser.blackRooks, Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing));
-            final int enPassantFile = parseEnPassantFile(parts[3]);
+            final int castlingRights = parseCastlingRights(parts[2], piecesParser.whiteRooks, piecesParser.blackRooks,
+                    Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing), variant==ChessVariant.CHESS960);
+            final int enPassantFile = parseEnPassantFile(parts[3], whiteToMove);
             final int fiftyMoveCounter = parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0;
             // This implementation does not require the full move counter (parts[5]).
 
             final Board board = new Board();
             board.setVariant(variant);
             piecesParser.fillBoard(board);
+            board.setWhite(whiteToMove);
+            board.getState().setHalfMoveClock(fiftyMoveCounter);
+            checkEnPassant(board, enPassantFile);
             checkCastlingRights(board, castlingRights);
             board.getState().setRights(castlingRights);
             board.getState().setEnPassantFile(enPassantFile);
-            board.getState().setHalfMoveClock(fiftyMoveCounter);
-            board.setWhite(whiteToMove);
 
             board.getState().setKey(Key.generateKey(board));
             board.getState().setPawnKey(Key.generatePawnKey(board));
             board.getState().setNonPawnKeys(Key.generateNonPawnKeys(board));
 
             return board;
+    }
+    
+    private static void checkEnPassant(Board board, int enPassantFile) {
+        if (enPassantFile == -1) return;
+        // Check that en passant square corresponds to a pawn of the color that is NOT to move
+        final int rank = board.isWhite() ? 4 : 3;
+        final int pawnSquare = Square.of(rank, enPassantFile);
+        final long colorPieces = board.isWhite() ? board.getBlackPieces() : board.getWhitePieces();
+        if (board.pieceAt(pawnSquare) != Piece.PAWN || (Bits.of(pawnSquare) & colorPieces) == 0) {
+            throw new IllegalArgumentException(String.format("Illegal 'en passant' square. There's no %s pawn at %s!", colorLabel(!board.isWhite()), Square.toNotation(pawnSquare)));
+        }
     }
     
     private static void checkCastlingRights(Board board, int castlingRights) {
@@ -305,7 +318,7 @@ public class FEN {
         return sideToMove ? "w" : "b";
     }
 
-    private static int parseCastlingRights(String castlingRights, long whiteRooks, long blackRooks, int whiteKing, int blackKing) {
+    private static int parseCastlingRights(String castlingRights, long whiteRooks, long blackRooks, int whiteKing, int blackKing, boolean isChess960Supported) {
         if (castlingRights.length() > 4) {
             throw new IllegalArgumentException("Invalid castling rights! " + castlingRights);
         }
@@ -383,11 +396,15 @@ public class FEN {
         return rightsString;
     }
 
-    private static int parseEnPassantFile(String enPassantSquare) {
+    private static int parseEnPassantFile(String enPassantSquare, boolean white) {
         if (enPassantSquare.equals("-")) {
             return -1;
         }
-        int square = Square.fromNotation(enPassantSquare);
+        final int square = Square.fromNotation(enPassantSquare);
+        final int expectedRank = white ? 5 : 2;
+        if (Rank.of(square) != expectedRank) {
+            throw new IllegalArgumentException(String.format("Invalid en passant square! Rank should be %s", Integer.toString(expectedRank+1)));
+        }
         return File.of(square);
     }
 

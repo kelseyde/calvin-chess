@@ -150,10 +150,12 @@ class FENTest {
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("rnbk1bnr/pppp1ppp/4p3/6q1/8/2P5/PPQPPPPP/RNB1KBNR w k - 0 1"));
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("rnbk1bnr/pppp1ppp/4p3/6q1/8/2P5/PPQPPPPP/RNB1KBNR w q - 0 1"));
         
-        // Illegal en passant
-        
-        // Use of Shredder FEN castling rights in standard board
-        
+        // Illegal en passant (no pawn there)
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2n2n1b/1P6/p3Q3/3B1P1N/P1PPP1P1/RNB1K2R w KQq a6 0 1"));
+        // Illegal en passant (not the right color to play)
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2n2n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R b KQq a6"));
+        // Illegal en passant (no the right rank)
+        assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("r1b1k2r/1pppqppp/2n2n1b/pP6/4Q3/3B1P1N/P1PPP1P1/RNB1K2R w KQq a5 0 1"));
     }
 
 }
