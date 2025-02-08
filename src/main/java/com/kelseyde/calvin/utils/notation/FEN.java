@@ -1,10 +1,12 @@
 package com.kelseyde.calvin.utils.notation;
 
+import static com.kelseyde.calvin.board.Piece.*;
+
 import com.kelseyde.calvin.board.*;
 
 import java.util.Arrays;
+import java.util.BitSet;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -25,29 +27,23 @@ public class FEN {
 
     private static final class PiecesParser {
         private static final String EMPTY_CELL = "x";
-        private long whitePawns = 0L;
-        private long whiteKnights = 0L;
-        private long whiteBishops = 0L;
-        private long whiteRooks = 0L;
-        private long whiteQueens = 0L;
-        private long whiteKing = 0L;
-        private long blackPawns = 0L;
-        private long blackKnights = 0L;
-        private long blackBishops = 0L;
-        private long blackRooks = 0L;
-        private long blackQueens = 0L;
-        private long blackKing = 0L;
 
-        PiecesParser (String[] files) {
-            List<List<String>> rankFileHash = Arrays.stream(files)
+        /** Populates a builder with the pieces.
+         * @param builder The builder to populate 
+         * @param pieces The FEN pieces parts ranks
+         * @return
+         */
+        static int[] parsePieces(BoardBuilder builder, String pieces) {
+            final List<List<String>> rankFileHash = Arrays.stream(pieces.split("/"))
                     .map(file -> Arrays.stream(file.split(""))
-                            .flatMap(this::parseSquare)
+                            .flatMap(PiecesParser::parseSquare)
                             .toList())
                     .collect(Collectors.toList());
             if (rankFileHash.size() != 8) {
                 throw new IllegalArgumentException("Illegal FEN: rank count is not 8!");
             }
             Collections.reverse(rankFileHash);
+            final int[] kingsPosition = {-1, -1};
             for (int rankIndex = 0; rankIndex < rankFileHash.size(); rankIndex++) {
                 final List<String> rank = rankFileHash.get(rankIndex);
                 if (rank.size() != 8) {
@@ -55,21 +51,23 @@ public class FEN {
                 }
                 for (int fileIndex = 0; fileIndex < rank.size(); fileIndex++) {
                     final int square = Square.of(rankIndex, fileIndex);
-                    final String squareValue = rank.get(fileIndex);
-                    final long squareBB = Bits.of(square);
+                    String squareValue = rank.get(fileIndex);
+                    final boolean white = Character.isUpperCase(squareValue.charAt(0));
+                    if (white) squareValue = squareValue.toLowerCase();
                     switch (squareValue) {
-                        case "P" -> whitePawns |= squareBB;
-                        case "N" -> whiteKnights |= squareBB;
-                        case "B" -> whiteBishops |= squareBB;
-                        case "R" -> whiteRooks |= squareBB;
-                        case "Q" -> whiteQueens |= squareBB;
-                        case "K" -> whiteKing |= squareBB;
-                        case "p" -> blackPawns |= squareBB;
-                        case "n" -> blackKnights |= squareBB;
-                        case "b" -> blackBishops |= squareBB;
-                        case "r" -> blackRooks |= squareBB;
-                        case "q" -> blackQueens |= squareBB;
-                        case "k" -> blackKing |= squareBB;
+                        case "p" -> builder.addPiece(square, PAWN, white);
+                        case "n" -> builder.addPiece(square, KNIGHT, white);
+                        case "b" -> builder.addPiece(square, BISHOP, white);
+                        case "r" -> builder.addPiece(square, ROOK, white);
+                        case "q" -> builder.addPiece(square, QUEEN, white);
+                        case "k" -> {
+                            builder.addPiece(square, KING, white);
+                            if (white) {
+                                kingsPosition[0] = square;
+                            } else {
+                                kingsPosition[1] = square;
+                            }
+                        }
                         case EMPTY_CELL -> {
                             // No piece, do nothing
                         }
@@ -77,11 +75,10 @@ public class FEN {
                     }
                 }
             }
-            checkOneKing(true);
-            checkOneKing(false);
+            return kingsPosition;
         }
         
-        private Stream<String> parseSquare(String square) {
+        private static Stream<String> parseSquare(String square) {
             if (square.length() != 1) {
                 // A rank was empty
                 throw new IllegalArgumentException("Illegal FEN a rank can't be empty!");
@@ -96,41 +93,64 @@ public class FEN {
             return IntStream.range(0, Integer.parseInt(square)).mapToObj(i -> EMPTY_CELL);
         }
 
-        private void illegalPiece(String piece) {
-            throw new IllegalArgumentException("Illegal FEN: " + piece + " is not a valid piece!");
+        private static void illegalPiece(String piece) {
+            throw new IllegalArgumentException(String.format("Illegal FEN: '%s' is not a valid piece!", piece));
         }
+    }
+    
+    private static class CastlingParser {
+        private final BitSet hasCastling;
+        private final BoardBuilder builder;
 
-        private void checkOneKing(boolean white) {
-            final long king = white ? whiteKing : blackKing;
-            if (Bits.count(king) != 1) {
-                throw new IllegalArgumentException(String.format("Illegal FEN: Expected one king, found %d.", Bits.count(king)));
+        private CastlingParser(BoardBuilder builder) {
+            hasCastling = new BitSet();
+            this.builder = builder;
+        }
+        private void set(boolean white, boolean kingside, Integer file) {
+            int index = Colour.index(white);
+            if (!kingside) {
+                index += 2;
+            }
+            if (hasCastling.get(index)) {
+                throw new IllegalArgumentException(String.format("Illegal FEN: %s %s side castling rights are defined multiple times!", Colour.label(white), kingside ? "king":"queen"));
+            }
+            hasCastling.set(index, white);
+            if (file != null) {
+                builder.addCastlingRights(white, kingside, file);
+            } else {
+                builder.addCastlingRights(white, kingside);
             }
         }
 
-        private void fillBoard(Board board) {
-            board.setPawns(whitePawns | blackPawns);
-            board.setKnights(whiteKnights | blackKnights);
-            board.setBishops(whiteBishops | blackBishops);
-            board.setRooks(whiteRooks | blackRooks);
-            board.setQueens(whiteQueens | blackQueens);
-            board.setKings(whiteKing | blackKing);
-            board.setWhitePieces(whitePawns | whiteKnights | whiteBishops | whiteRooks | whiteQueens | whiteKing);
-            board.setBlackPieces(blackPawns | blackKnights | blackBishops | blackRooks | blackQueens | blackKing);
-            board.setPieces(calculatePieceList(board));
-        }
-        
-        private Piece[] calculatePieceList(Board board) {
-            final Piece[] pieceList = new Piece[Square.COUNT];
-            for (int square = 0; square < Square.COUNT; square++) {
-                final long squareMask = Bits.of(square);
-                if ((squareMask & board.getPawns()) != 0)           pieceList[square] = Piece.PAWN;
-                else if ((squareMask & board.getKnights()) != 0)    pieceList[square] = Piece.KNIGHT;
-                else if ((squareMask & board.getBishops()) != 0)    pieceList[square] = Piece.BISHOP;
-                else if ((squareMask & board.getRooks()) != 0)      pieceList[square] = Piece.ROOK;
-                else if ((squareMask & board.getQueens()) != 0)     pieceList[square] = Piece.QUEEN;
-                else if ((squareMask & board.getKings()) != 0)      pieceList[square] = Piece.KING;
+        private void parseCastlingRights(String castlingRights, BoardBuilder builder, int whiteKing, int blackKing) {
+            if (castlingRights.length() > 4) {
+                throw new IllegalArgumentException("Invalid castling rights! " + castlingRights);
             }
-            return pieceList;
+            for (int i = 0; i < castlingRights.length(); i++) {
+                char right = castlingRights.charAt(i);
+                switch (right) {
+                    case 'K' -> set(true, true, null);
+                    case 'Q' -> set(true, false, null);
+                    case 'k' -> set(false, true, null);
+                    case 'q' -> set(false, false, null);
+                    case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' -> {
+                        // Shredder FEN: White rooks on specified files
+                        int file = File.fromNotation(right);
+                        int kingFile = File.of(whiteKing);
+                        set(true, file > kingFile, file);
+                    }
+                    case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' -> {
+                        // Shredder FEN: Black rooks on specified files
+                        int file = File.fromNotation(Character.toUpperCase(right));
+                        int kingFile = File.of(blackKing);
+                        set(false, file > kingFile, file);
+                    }
+                    case '-' -> {
+                        // No castling rights, nothing to do
+                    }
+                    default -> throw new IllegalArgumentException("Invalid castling right! " + right);
+                }
+            }
         }
     }
 
@@ -143,7 +163,7 @@ public class FEN {
      * @throws IllegalArgumentException if the FEN string is not valid
      */
     public static Board toBoard(String fen) {
-            return toBoard(fen, ChessVariant.STANDARD);
+        return toBoard(fen, ChessVariant.STANDARD);
     }
 
     /** 
@@ -156,106 +176,22 @@ public class FEN {
      * @throws IllegalArgumentException if the FEN string is not valid
      */
     public static Board toBoard(String fen, ChessVariant variant) {
-            if (fen==null || variant==null) {
-                throw new IllegalArgumentException();
-            }
-            final String[] parts = fen.split(" ");
-            final PiecesParser piecesParser = new PiecesParser(parts[0].split("/"));
-
-            final boolean whiteToMove = parseSideToMove(parts[1]);
-            final int castlingRights = parseCastlingRights(parts[2], piecesParser.whiteRooks, piecesParser.blackRooks,
-                    Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing));
-            final int enPassantFile = parseEnPassantFile(parts[3], whiteToMove);
-            final int fiftyMoveCounter = parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0;
-            // This implementation does not require the full move counter (parts[5]).
-
-            final Board board = new Board();
-            board.setVariant(variant);
-            piecesParser.fillBoard(board);
-            board.setWhite(whiteToMove);
-            board.getState().setHalfMoveClock(fiftyMoveCounter);
-            checkEnPassant(board, enPassantFile);
-            checkCastlingRights(board, castlingRights);
-            board.getState().setRights(castlingRights);
-            board.getState().setEnPassantFile(enPassantFile);
-
-            board.getState().setKey(Key.generateKey(board));
-            board.getState().setPawnKey(Key.generatePawnKey(board));
-            board.getState().setNonPawnKeys(Key.generateNonPawnKeys(board));
-
-            return board;
-    }
-
-    private static void checkEnPassant(Board board, int enPassantFile) {
-        if (enPassantFile == -1) return;
-        // Check that en passant square corresponds to a pawn of the color that is NOT to move
-        final int rank = board.isWhite() ? 4 : 3;
-        final int pawnSquare = Square.of(rank, enPassantFile);
-        final long colorPieces = board.isWhite() ? board.getBlackPieces() : board.getWhitePieces();
-        if (board.pieceAt(pawnSquare) != Piece.PAWN || (Bits.of(pawnSquare) & colorPieces) == 0) {
-            throw new IllegalArgumentException(String.format("Illegal 'en passant' square. There's no %s pawn at %s!", colorLabel(!board.isWhite()), Square.toNotation(pawnSquare)));
+        if (fen==null || fen.trim().isEmpty()) {
+            throw new IllegalArgumentException();
         }
-    }
-    
-    private static void checkCastlingRights(Board board, int castlingRights) {
-        if (castlingRights == 0) return;
-        final boolean whiteKingSide = checkCastlingRight(board, castlingRights, true, true);
-        final boolean whiteQueenSide = checkCastlingRight(board, castlingRights, false, true);
-        final boolean blackKingSide = checkCastlingRight(board, castlingRights, true, false);
-        final boolean blackQueenSide = checkCastlingRight(board, castlingRights, false, false);
-        if (board.variant()==ChessVariant.CHESS960) {
-            // Check that files of kings are consistent if both colors can castle
-            if ((whiteKingSide || whiteQueenSide) && (blackKingSide || blackQueenSide) && File.of(board.kingSquare(true)) != File.of(board.kingSquare(false))) {
-                throw new IllegalArgumentException("Illegal castling rights, both kings are not on the same file");
-            }
-            // Check that files of rooks are consistent
-            if (whiteKingSide && blackKingSide && File.of(Castling.getRook(castlingRights, true, true)) != File.of(Castling.getRook(castlingRights, true, false))) {
-                throw new IllegalArgumentException("Illegal castling rights, king side rooks are not on the same file");
-            }
-            if (whiteQueenSide && blackQueenSide && File.of(Castling.getRook(castlingRights, false, true)) != File.of(Castling.getRook(castlingRights, false, false))) {
-                throw new IllegalArgumentException("Illegal castling rights, queen side rooks are not on the same file");
-            }
-        }
-    }
+        final BoardBuilder builder = new BoardBuilder(variant);
+        final String[] parts = fen.split(" ");
+        final int[] kingPositions = PiecesParser.parsePieces(builder, parts[0]);
 
-    private static boolean checkCastlingRight(Board board, int castlingRights, boolean kingside, boolean white) {
-        final boolean allowed = kingside ? Castling.kingsideAllowed(castlingRights, white) : Castling.queensideAllowed(castlingRights, white);
-        if (!allowed) {
-            return false;
-        }
-        // Check if rook is at its starting position and if king is too
-        final long pieces = board.getPieces(white);
-        final int rookSquare;
-        if (board.variant()==ChessVariant.CHESS960) {
-            rookSquare = Castling.getRook(castlingRights, kingside, white);
-            // Check if king is at its starting position. In Chess960, the king can be at almost any position in its side of the board.
-            // The only constraint is there should be a rook at its side.
-            final int kingExpectedRank = white ? 0 : 7;
-            final int kingSquare = board.kingSquare(white);
-            if (Rank.of(kingSquare) != kingExpectedRank) {
-                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at its starting rank", colorLabel(white)));
-            }
-            // Check if king has moved (it has moved if it is at first or last file, or if it is not at the right side of the rook involved in the castling
-            final int kingFile = File.of(kingSquare);
-            final boolean effectiveKingSide = kingSquare<rookSquare;
-            if (kingFile==0 || kingFile==7 || kingside != effectiveKingSide) {
-                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at its starting file", colorLabel(white)));
-            }
-        } else {
-            final int kingSquare = white ? 4 : 60;
-            if (board.pieceAt(kingSquare) != Piece.KING || (pieces&Bits.of(kingSquare)) == 0) {
-                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at %s",colorLabel(white),Square.toNotation(kingSquare)));
-            }
-            rookSquare = Castling.rookFrom(kingside, white);
-        }
-        if (board.pieceAt(rookSquare) != Piece.ROOK || (pieces&Bits.of(rookSquare)) == 0) {
-            throw new IllegalArgumentException(String.format("Illegal castling rights for %s, there's no rook at %s",colorLabel(white),Square.toNotation(rookSquare)));
-        }
-        return true;
-    }
+        final boolean whiteToMove = parseSideToMove(parts[1]);
+        builder.setWhiteToMove(whiteToMove);
+        
+        new CastlingParser(builder).parseCastlingRights(parts[2], builder, kingPositions[0], kingPositions[1]);
+        builder.setEnPassantFile(parseEnPassantFile(parts[3], whiteToMove));
+        builder.setFiftyMoveCounter(parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0);
+        // This implementation does not require the full move counter (parts[5]).
 
-    private static String colorLabel(boolean white) {
-        return white ? "white" : "black";
+        return builder.build();
     }
 
     /**
@@ -327,55 +263,6 @@ public class FEN {
         return sideToMove ? "w" : "b";
     }
 
-    private static int parseCastlingRights(String castlingRights, long whiteRooks, long blackRooks, int whiteKing, int blackKing) {
-        if (castlingRights.length() > 4) {
-            throw new IllegalArgumentException("Invalid castling rights! " + castlingRights);
-        }
-        int rights = Castling.empty();
-        for (int i = 0; i < castlingRights.length(); i++) {
-            char right = castlingRights.charAt(i);
-            switch (right) {
-                case 'K' -> rights = updateCastlingRights(rights, true, true, findRook(whiteRooks, true, true));
-                case 'Q' -> rights = updateCastlingRights(rights, false, true, findRook(whiteRooks, false, true));
-                case 'k' -> rights = updateCastlingRights(rights, true, false, findRook(blackRooks, true, false));
-                case 'q' -> rights = updateCastlingRights(rights, false, false, findRook(blackRooks, false, false));
-                case 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H' -> {
-                    // Shredder FEN: White rooks on specified files
-                    int file = File.fromNotation(right);
-                    int kingFile = File.of(whiteKing);
-                    if (file < kingFile) {
-                        rights = Castling.setRook(rights, false, true, Square.of(0, file)); // Queenside
-                    } else {
-                        rights = Castling.setRook(rights, true, true, Square.of(0, file));  // Kingside
-                    }
-                }
-                case 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h' -> {
-                    // Shredder FEN: Black rooks on specified files
-                    int file = File.fromNotation(Character.toUpperCase(right));
-                    int kingFile = File.of(blackKing);
-                    if (file < kingFile) {
-                        rights = Castling.setRook(rights, false, false, Square.of(7, file)); // Queenside
-                    } else {
-                        rights = Castling.setRook(rights, true, false, Square.of(7, file));  // Kingside
-                    }
-                }
-                case '-' -> {
-                    // No castling rights, so return empty rights directly
-                    return Castling.empty();
-                }
-                default -> throw new IllegalArgumentException("Invalid castling right! " + right);
-            }
-        }
-        return rights;
-    }
-    
-    private static int updateCastlingRights(int rights, boolean kingside, boolean white, int square) {
-        if ((kingside && Castling.kingsideAllowed(rights, white)) || (!kingside && Castling.queensideAllowed(rights, white))) {
-            throw new IllegalArgumentException(String.format("Invalid castling for %s, there are two %s side castlings defined", colorLabel(white), kingside ? "king":"queen"));
-        }
-        return Castling.setRook(rights, kingside, white, square);
-    }
-
     private static String toCastlingRights(Board board, int rights) {
         if (rights == Castling.empty()) {
             return "-";
@@ -442,26 +329,5 @@ public class FEN {
 
     private static String toFullMoveCounter(int ply) {
         return Integer.toString(1 + (ply / 2));
-    }
-
-    private static int findRook(long rooks, boolean kingside, boolean white) {
-
-        long firstRank = white ? Rank.FIRST : Rank.EIGHTH;
-        long firstRankRooks = rooks & firstRank;
-
-        if (Bits.count(firstRankRooks) == 0) {
-            throw new IllegalArgumentException("Illegal FEN: castling rights with no rooks on the first rank!");
-        }
-
-        if (Bits.count(firstRankRooks) == 1) {
-            return Bits.next(firstRankRooks);
-        }
-
-        List<Integer> squares = Arrays.stream(Bits.collect(firstRankRooks))
-                .boxed()
-                .sorted(Comparator.comparing(File::of))
-                .toList();
-
-        return kingside ? squares.get(squares.size() - 1) : squares.get(0);
     }
 }

@@ -1,10 +1,15 @@
 package com.kelseyde.calvin.board;
 
 /**
- * Utility class to handle castling rights. Especially important for (D)FRC, where the starting positions of the rooks
+ * Utility class to handle castling rights.
+ * <br>Especially important for <a href="https://en.wikipedia.org/wiki/Chess960/">Fisher random chess</a>, where the starting positions of the rooks
  * and king can vary, and the logic for handling castle moves is more complex.
  */
 public class Castling {
+    
+    private Castling() {
+        super();
+    }
 
     // For standard chess we can use some hardcoded shortcut values to simplify the logic
     public static class Standard {
@@ -60,7 +65,11 @@ public class Castling {
 
     public static int kingTo(boolean kingside, boolean white) {
         // Castling destination for king
-        return white ? (kingside ? 6 : 2) : (kingside ? 62 : 58);
+        if (kingside) {
+            return white ? 6 : 62;
+        } else {
+            return white ? 2 : 58;
+        }
     }
 
     public static boolean isKingside(int from, int to) {
