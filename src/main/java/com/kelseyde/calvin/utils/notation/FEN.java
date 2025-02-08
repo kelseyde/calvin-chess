@@ -164,7 +164,7 @@ public class FEN {
 
             final boolean whiteToMove = parseSideToMove(parts[1]);
             final int castlingRights = parseCastlingRights(parts[2], piecesParser.whiteRooks, piecesParser.blackRooks,
-                    Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing), variant==ChessVariant.CHESS960);
+                    Bits.next(piecesParser.whiteKing), Bits.next(piecesParser.blackKing));
             final int enPassantFile = parseEnPassantFile(parts[3], whiteToMove);
             final int fiftyMoveCounter = parts.length > 4 ? parseFiftyMoveCounter(parts[4]) : 0;
             // This implementation does not require the full move counter (parts[5]).
@@ -233,13 +233,13 @@ public class FEN {
             final int kingExpectedRank = white ? 0 : 7;
             final int kingSquare = board.kingSquare(white);
             if (Rank.of(kingSquare) != kingExpectedRank) {
-                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at it starting rank", colorLabel(white)));
+                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at its starting rank", colorLabel(white)));
             }
             // Check if king has moved (it has moved if it is at first or last file, or if it is not at the right side of the rook involved in the castling
             final int kingFile = File.of(kingSquare);
             final boolean effectiveKingSide = kingSquare<rookSquare;
             if (kingFile==0 || kingFile==7 || kingside != effectiveKingSide) {
-                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at it starting file", colorLabel(white)));
+                throw new IllegalArgumentException(String.format("Illegal castling rights for %s, king is not at its starting file", colorLabel(white)));
             }
         } else {
             final int kingSquare = white ? 4 : 60;
@@ -327,7 +327,7 @@ public class FEN {
         return sideToMove ? "w" : "b";
     }
 
-    private static int parseCastlingRights(String castlingRights, long whiteRooks, long blackRooks, int whiteKing, int blackKing, boolean isChess960Supported) {
+    private static int parseCastlingRights(String castlingRights, long whiteRooks, long blackRooks, int whiteKing, int blackKing) {
         if (castlingRights.length() > 4) {
             throw new IllegalArgumentException("Invalid castling rights! " + castlingRights);
         }
