@@ -649,6 +649,7 @@ public class Board {
         }
         newBoard.setMoves(newMoves);
         newBoard.setPieces(Arrays.copyOf(this.getPieces(), this.getPieces().length));
+        newBoard.ply = this.ply;
         return newBoard;
     }
 
