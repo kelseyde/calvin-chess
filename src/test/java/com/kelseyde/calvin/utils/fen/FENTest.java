@@ -2,6 +2,7 @@ package com.kelseyde.calvin.utils.fen;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.fathzer.chess.utils.test.helper.fen.FENComparator;
 import com.kelseyde.calvin.board.Bits;
 import com.kelseyde.calvin.board.Board;
 import com.kelseyde.calvin.board.BoardState;
@@ -66,6 +67,11 @@ class FENTest {
         assertEquals(0, state.getEnPassantFile());
     }
     
+    private void assertChess960FenEquals(String expected, String actual) {
+        final boolean ok =new FENComparator().withStrictCastling(false).withStrictMoveNumber(false).areEqual(expected, actual);
+        assertTrue(ok, expected + " is not a FEN equivalent of " + actual);
+    }
+    
     @Test
     void testChess960() {
         // Warning, all move counters should be ignored in this test because Board does not support move counter different from the previous move count
@@ -77,10 +83,9 @@ class FENTest {
         assertEquals("h8", Square.toNotation(Castling.getRook(board.getState().getRights(), true, false)));
         assertEquals("e8", Square.toNotation(Castling.getRook(board.getState().getRights(), false, false)));
         
-        //TODO
-//TODO        assertEquals(fen, FEN.toFEN(board));
+        assertChess960FenEquals(fen, FEN.toFEN(board));
         
-        final String fenWithInnerRook = "rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 1";
+        final String fenWithInnerRook = "rn2k1r1/ppp1pp1p/3p2p1/5bn1/P7/2N2B2/1PPPPP2/2BNK1RR w Gkq - 4 4";
         board = FEN.toBoard(fenWithInnerRook, ChessVariant.CHESS960);
         int rights = board.getState().getRights();
         assertTrue(Castling.kingsideAllowed(rights, true));     
@@ -92,11 +97,11 @@ class FENTest {
         assertEquals(Square.fromNotation("g8"), Castling.getRook(rights, true, false));
         assertEquals(Square.fromNotation("a8"), Castling.getRook(rights, false, false));
 
-//TODO        assertEquals(fenWithInnerRook, FEN.toFEN(board));
+        assertChess960FenEquals(fenWithInnerRook, FEN.toFEN(board));
         
         final String otherFenWithInnerRook = "1r2k1r1/ppp1pp2/3p2pp/5bn1/P7/2N2B2/1PPPPP2/RR2K3 w Bkq - 4 1";
         board = FEN.toBoard(otherFenWithInnerRook, ChessVariant.CHESS960);
-//TODO        assertEquals(otherFenWithInnerRook, FEN.toFEN(board));
+        assertChess960FenEquals(otherFenWithInnerRook, FEN.toFEN(board));
         
         // There's no rook at the specified rank
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("1r2k3/ppp1ppr1/3p2pp/5bn1/P7/2N2B2/1PPPPP2/RR2K3 w Bqg - 4 1", ChessVariant.CHESS960));
@@ -167,5 +172,4 @@ class FENTest {
         // Castling with shredder notation different from a or h files
         assertThrows(IllegalArgumentException.class, () -> FEN.toBoard("1rb1k1r1/1pppqppp/2n2n1b/pP6/4Q3/2NB1P1N/P1PPP1P1/1RB1K1R1 w KQkq - 0 1"));
     }
-
 }
