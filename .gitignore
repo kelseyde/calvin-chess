@@ -27,3 +27,4 @@ target/**
 venv
 
 .DS_Store
+/target/
