@@ -1,6 +1,8 @@
 package com.kelseyde.calvin.movegen;
 
 import com.kelseyde.calvin.board.*;
+import com.kelseyde.calvin.utils.notation.FEN;
+
 import org.junit.jupiter.api.*;
 
 import java.util.List;
@@ -22,8 +24,7 @@ public class Chess960Test {
     @Test
     public void testRookGoesToKingSquare() {
 
-        Board board = Board.from("qnnbrk1r/ppppp1pp/5p2/3b4/3B4/5P2/PPPPP1PP/QNNBRK1R w KQkq - 2 3");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("qnnbrk1r/ppppp1pp/5p2/3b4/3B4/5P2/PPPPP1PP/QNNBRK1R w KQkq - 2 3", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("f1h1", Move.CASTLE_FLAG);
         assertMove(board, target, true);
@@ -38,9 +39,7 @@ public class Chess960Test {
     @Test
     public void testRookGoesToKingSquareBlocked() {
 
-        Board board = Board.from("qnnbrkbr/pppppppp/8/8/8/8/PPPPPPPP/QNNBRKBR w KQkq - 0 1");
-        board.setVariant(ChessVariant.CHESS960);
-
+        Board board = FEN.toBoard("qnnbrkbr/pppppppp/8/8/8/8/PPPPPPPP/QNNBRKBR w KQkq - 0 1", ChessVariant.CHESS960);
         Move target = Move.fromUCI("f1h1", Move.CASTLE_FLAG);
         assertMove(board, target, false);
 
@@ -49,8 +48,7 @@ public class Chess960Test {
     @Test
     public void testQueensideRookOnKingside() {
 
-        Board board = Board.from("qn2rkbr/ppbppppp/1np5/8/8/1NP5/PPBPPPPP/QN2RKBR w KQkq - 2 4");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("qn2rkbr/ppbppppp/1np5/8/8/1NP5/PPBPPPPP/QN2RKBR w KQkq - 2 4", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("f1e1", Move.CASTLE_FLAG);
         assertMove(board, target, true);
@@ -64,8 +62,7 @@ public class Chess960Test {
     @Test
     public void testQueensideRookOnKingsideTwo() {
 
-        Board board = Board.from("bbqnr1nQ/1ppppp1p/8/p7/5k2/PP2N3/2PPPP1P/1B2RKNR w KQ - 2 8");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("bbqnr1nQ/1ppppp1p/8/p7/5k2/PP2N3/2PPPP1P/1B2RKNR w KQ - 2 8", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("f1e1", Move.CASTLE_FLAG);
         assertMove(board, target, true);
@@ -78,9 +75,7 @@ public class Chess960Test {
 
     @Test
     public void testQueensideRookOnKingsideCastleKingside() {
-
-        Board board = Board.from("bnqbrk1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/BNQBRK1R w KQkq - 2 2");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("bnqbrk1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/BNQBRK1R w KQkq - 2 2", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("f1h1", Move.CASTLE_FLAG);
         assertMove(board, target, true);
@@ -94,8 +89,7 @@ public class Chess960Test {
     @Test
     public void testQueensideRookOnKingsideBlocked() {
 
-        Board board = Board.from("nbb1rkrn/pp1ppppp/1qp5/8/8/1QP5/PP1PPPPP/NBB1RKRN w KQkq - 2 3");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("nbb1rkrn/pp1ppppp/1qp5/8/8/1QP5/PP1PPPPP/NBB1RKRN w KQkq - 2 3", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("f1e1", Move.CASTLE_FLAG);
         assertMove(board, target, false);
@@ -105,8 +99,7 @@ public class Chess960Test {
     @Test
     public void testKingsideRookOnQueenside() {
 
-        Board board = Board.from("nbbqr2n/ppp2kr1/3ppppp/8/8/3PPPN1/PPPBBQPP/NRKR4 w KQ - 2 8");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("nbbqr2n/ppp2kr1/3ppppp/8/8/3PPPN1/PPPBBQPP/NRKR4 w KQ - 2 8", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("c1d1", Move.CASTLE_FLAG);
         assertMove(board, target, true);
@@ -119,8 +112,7 @@ public class Chess960Test {
     @Test
     public void testKingsideRookOnQueensideBlocked() {
 
-        Board board = Board.from("nbbqr1rn/ppp2k2/3ppppp/8/8/3PPPN1/PPPBB1PP/NRKR2Q1 w KQ - 0 7");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("nbbqr1rn/ppp2k2/3ppppp/8/8/3PPPN1/PPPBB1PP/NRKR2Q1 w KQ - 0 7", ChessVariant.CHESS960);
 
         Move target = Move.fromUCI("c1d1", Move.CASTLE_FLAG);
         assertMove(board, target, false);
@@ -129,8 +121,7 @@ public class Chess960Test {
     @Test
     public void testDontGetConfusedBetweenKingsideQueenside() {
 
-        Board board = Board.from("bqnbrk1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/BQNBRK1R w KQkq - 2 2");
-        board.setVariant(ChessVariant.CHESS960);
+        Board board = FEN.toBoard("bqnbrk1r/pppppppp/5n2/8/8/5N2/PPPPPPPP/BQNBRK1R w KQkq - 2 2", ChessVariant.CHESS960);
         Move kingside = Move.fromUCI("f1h1", Move.CASTLE_FLAG);
         Move queenside = Move.fromUCI("f1e1", Move.CASTLE_FLAG);
         assertMove(board, kingside, true);
@@ -141,8 +132,7 @@ public class Chess960Test {
 	@Test
 	void testKingDoesntMoveCastling() {
 		// Rook is attacked, but the castling is legal
-		final Board board = Board.from("nrk2rnb/pp1ppppp/6b1/q1p5/3P2Q1/1N3N2/1P2PPPP/1RK1BR1B w KQkq - 2 10");
-		board.setVariant(ChessVariant.CHESS960);
+		final Board board = FEN.toBoard("nrk2rnb/pp1ppppp/6b1/q1p5/3P2Q1/1N3N2/1P2PPPP/1RK1BR1B w KQkq - 2 10", ChessVariant.CHESS960);
 		final Move move = Move.fromUCI("c1b1", Move.CASTLE_FLAG);
 		assertMove(board, move, true);
 	}
@@ -150,8 +140,7 @@ public class Chess960Test {
 	@Test
 	void testPinnedRookCastling() {
 		// Test castling where king seems safe ... but is not because it does not move and the rook does not defend it anymore
-		final Board board = Board.from("nrk1brnb/pp1ppppp/8/2p5/3P4/1N1Q1N2/1PP1PPPP/qRK1BR1B w KQkq - 2 10");
-		board.setVariant(ChessVariant.CHESS960);
+		final Board board = FEN.toBoard("nrk1brnb/pp1ppppp/8/2p5/3P4/1N1Q1N2/1PP1PPPP/qRK1BR1B w KQkq - 2 10", ChessVariant.CHESS960);
 		final Move move = Move.fromUCI("c1b1", Move.CASTLE_FLAG);
 		assertMove(board, move, false);
 	}
@@ -183,7 +172,5 @@ public class Chess960Test {
         Assertions.assertFalse(Bits.contains(board.getRooks(true), rookFromSq));
         Assertions.assertTrue(Bits.contains(board.getKing(true), kingToSq));
         Assertions.assertTrue(Bits.contains(board.getRooks(true), rookToSq));
-
     }
-
 }

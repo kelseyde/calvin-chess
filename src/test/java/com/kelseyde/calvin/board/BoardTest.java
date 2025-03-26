@@ -316,5 +316,15 @@ public class BoardTest {
         return positions;
     }
 
-
+    @Test
+    void testCopy() {
+        Board board = FEN.toBoard(FEN.STARTPOS);
+        board.makeMove(Move.fromUCI("e2e4"));
+        BoardState state = board.getState();
+        Board copy = board.copy();
+        Assertions.assertEquals(state, copy.getState());
+        Assertions.assertEquals(board.getPly(), copy.getPly());
+        // Tests that unmakeMove does not throw exception
+        copy.unmakeMove();
+    }
 }

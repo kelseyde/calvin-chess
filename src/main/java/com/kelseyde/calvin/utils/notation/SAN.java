@@ -5,85 +5,93 @@ import com.kelseyde.calvin.movegen.MoveGenerator;
 
 import java.util.List;
 
+/**
+ * A move to <a href="https://en.wikipedia.org/wiki/Algebraic_notation_(chess)">Standard Algebraic Notation (SAN)</a> converter.
+ */
 public class SAN {
 
+    private SAN() {
+        super();
+    }
+
     /**
-     * Convert move to Standard Algebraic Notation (SAN)
-     * Note: the move must not yet have been made on the board
+     * Converts a move to its Standard Algebraic Notation (SAN)
+     * @param move the move to convert
+     * @param board the board on which the move is to be made.
+     * @return the move in SAN notation.
+     * <br>The SAN standard is relatively lax, some parts of the notation are optional (e.g. the <i>'e.p.'</i> when doing an en passant capture).
+     * <br>This method returns the variant used in the PGN standard (no <i>'e.p.'</i> for en passant captures).
      */
     public static String fromMove(Move move, Board board) {
-        Piece piece = board.pieceAt(move.from());
-        Piece captured = board.pieceAt(move.to());
+        final Piece piece = board.pieceAt(move.from());
+        final Piece captured = board.pieceAt(move.to());
 
         if (move.isCastling()) {
-            int delta = move.to() - move.from();
-            return delta == 2 ? "O-O" : "O-O-O";
+            return move.to() > move.from() ? "O-O" : "O-O-O";
         }
 
-        MoveGenerator moveGenerator = new MoveGenerator();
-        String notation = "";
+        final MoveGenerator moveGenerator = new MoveGenerator();
+        final StringBuilder notation = new StringBuilder();
+
         if (piece != Piece.PAWN) {
-            notation += piece.code().toUpperCase();
+            notation.append(piece.code().toUpperCase());
         }
 
-        // Check if any ambiguity exists in notation (e.g. if e2 can be reached via Nfe2 and Nbe2)
-        if (piece != Piece.PAWN && piece != Piece.KING) {
-            List<Move> legalMoves = moveGenerator.generateMoves(board);
+        addDisambiguation(notation, board, move, moveGenerator);
 
-            for (Move legalMove : legalMoves) {
-
-                if (legalMove.from() != move.from() && legalMove.to() == move.to()) {
-                    if (board.pieceAt(legalMove.from()) == piece) {
-                        int fromFileIndex = File.of(move.from());
-                        int alternateFromFileIndex = File.of(legalMove.to());
-                        int fromRankIndex = Rank.of(move.from());
-                        int alternateFromRankIndex = Rank.of(legalMove.from());
-
-                        if (fromFileIndex != alternateFromFileIndex) {
-                            notation += File.toNotation(move.from());
-                            break;
-                        }
-                        else if (fromRankIndex != alternateFromRankIndex)
-                        {
-                            notation += Rank.toRankNotation(move.from());
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (captured != null) {
-            // add 'x' to indicate capture
+        if (captured != null || move.isEnPassant()) {
             if (piece == Piece.PAWN) {
-                notation += File.toNotation(move.from());
+                notation.append(File.toNotation(move.from()));
             }
-            notation += "x";
-        }
-        else {
-            // Check if capturing en passant
-            if (move.isEnPassant()) {
-                notation += File.toNotation(move.from()) + "x";
-            }
+            // add 'x' to indicate capture
+            notation.append("x");
         }
 
-        notation += File.toNotation(move.to());
-        notation += Rank.toRankNotation(move.to());
+        notation.append(Square.toNotation(move.to()));
 
         // Add promotion piece type
         if (move.promoPiece() != null) {
             Piece promotionPieceType = move.promoPiece();
-            notation += "=" + promotionPieceType.code().toUpperCase();
+            notation.append("=" + promotionPieceType.code().toUpperCase());
         }
 
         board.makeMove(move);
         if (moveGenerator.isCheck(board, board.isWhite())) {
             List<Move> legalMoves = moveGenerator.generateMoves(board);
-            notation += legalMoves.isEmpty() ? "#" : "+";
+            notation.append(legalMoves.isEmpty() ? "#" : "+");
         }
         board.unmakeMove();
 
-        return notation;
+        return notation.toString();
+    }
+
+    /**
+     * Checks if any ambiguity exists in notation and adds disambiguation if needed (e.g. if e2 can be reached via Nfe2 and Nbe2)
+     * @param notation the notation to add disambiguation to
+     * @param board the board on which the move is played
+     * @param move the move to add disambiguation for
+     * @param moveGenerator the move generator to use for generating moves
+     */
+    private static void addDisambiguation(StringBuilder notation, Board board, Move move,MoveGenerator moveGenerator) {
+        final Piece piece = board.pieceAt(move.from());
+        if (piece != Piece.PAWN && piece != Piece.KING) {
+            final List<Move> candidates = moveGenerator.generateMoves(board).stream().filter(m -> m.to() == move.to() && board.pieceAt(m.from()) == piece).toList();
+            
+            if (candidates.size() > 1) {
+                // Disambiguation is required
+                final boolean fileIsEnough = candidates.stream().filter(m -> File.of(m.from()) == File.of(move.from())).count() == 1;
+                if (fileIsEnough) {
+                    notation.append(File.toNotation(move.from()));
+                } else {
+                    final boolean rankIsEnough = candidates.stream().filter(m -> Rank.of(m.from()) == Rank.of(move.from())).count() == 1;
+                    if (rankIsEnough) {
+                        notation.append(Rank.toRankNotation(move.from()));
+                    } else {
+                        notation.append(Square.toNotation(move.from()));
+                    }
+                }
+            }
+        }
     }
 
 }
