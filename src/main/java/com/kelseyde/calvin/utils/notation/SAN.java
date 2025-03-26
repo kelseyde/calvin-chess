@@ -27,8 +27,7 @@ public class SAN {
         Piece captured = board.pieceAt(move.to());
 
         if (move.isCastling()) {
-            int delta = move.to() - move.from();
-            return delta == 2 ? "O-O" : "O-O-O";
+            return move.to() > move.from() ? "O-O" : "O-O-O";
         }
 
         MoveGenerator moveGenerator = new MoveGenerator();

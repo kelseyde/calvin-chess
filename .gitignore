@@ -28,3 +28,4 @@ venv
 
 .DS_Store
 /target/
+.settings
