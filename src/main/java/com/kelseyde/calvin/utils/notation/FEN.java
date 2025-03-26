@@ -197,7 +197,7 @@ public class FEN {
     /**
      * Converts a Board to a Forsyth-Edwards Notation string
      * @param board the Board
-     * @return the Forsyth-Edwards Notation string
+     * @return the Forsyth-Edwards Notation string (if the board is a <a href="https://en.wikipedia.org/wiki/Chess960">chess960</a> board, the castling rights are encoded according to the <a href="https://www.chessprogramming.org/Forsyth-Edwards_Notation#Shredder-FEN">Shredder FEN</a> format)
      */
     public static String toFEN(Board board) {
         try {
