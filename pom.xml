@@ -62,8 +62,13 @@
             <version>5.11.0</version>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>com.fathzer</groupId>
+            <artifactId>chess-test-utils</artifactId>
+            <version>0.0.1</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
-
     <build>
         <resources>
             <resource>

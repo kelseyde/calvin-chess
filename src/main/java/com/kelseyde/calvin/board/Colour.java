@@ -9,4 +9,8 @@ public class Colour {
         return white ? WHITE : BLACK;
     }
 
+    public static String label(boolean white) {
+        return white ? "white" : "black";
+    }
+
 }
